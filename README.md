@@ -1,6 +1,6 @@
 # Event API – FastAPI Project
 
-This is a REST API built using **FastAPI**. It allows users to create, view, and manage events, with the added functionality of simulating notifications when an event is about to start.
+This is a REST API built using **FastAPI**. It allows users to create, view, and manage events, with the added functionality of simulating notifications when an event is about to start using a **background worker**.
 
 ---
 
@@ -9,11 +9,12 @@ This is a REST API built using **FastAPI**. It allows users to create, view, and
 - Add new events with title, description, and datetime  
 - List all existing events  
 - Retrieve a specific event by its ID  
-- Simulated notifications: If an event is scheduled to begin within the next 5 minutes, a message is printed to the console  
+- Simulated notifications in the background: if an event is scheduled to begin within the next 5 minutes, a message is printed to the console automatically  
 - MVC-like structure for clarity and maintainability (`models/`, `services/`, `controllers/`)  
 - In-memory data storage using Python dictionary  
 - Timezone-aware datetime validation with Pydantic  
 - Unit tests with `pytest` and FastAPI’s `TestClient`  
+- Real-time event checks using FastAPI’s `lifespan` and async background loop  
 
 ---
 
@@ -70,12 +71,14 @@ Tests include:
 - Listing all events
 - Handling non-existent event ID (404)
 - Triggering notification for soon-starting events
+- Checking if background notification logic works directly (unit-level)
+
   
 You should see something like this if everything works:
 
 ```bash
 tests/test_events.py .... [100%]
-4 passed in 0.7s
+5 passed in 0.7s
 ```
 ---
 
@@ -92,14 +95,14 @@ Currently, all event data is stored in a **Python dictionary** (`events_db`). Th
 
 ---
 
-### 2. Notification Logic Tied to Manual Requests
+### 2. Background Notifications Are Console-Only
 
-Right now, the "notification" is just a `print()` statement triggered **only when someone visits `/events`**. This is not scalable or reliable because:
-- If no one visits the route, notifications are never triggered.
-- There's no real-time background process monitoring upcoming events.
-- Notifications are printed to the server console, not sent to users (email, SMS, push, etc.).
+Now, notifications are handled by a background worker that checks every 60 seconds if any event is about to start (within 5 minutes). This is a better from, when notifications are only triggered by API calls.
+However, this setup still has these limitations:
+- Notifications are printed to the server console, not delivered to users.
+- There is no integration with real notification services like email, SMS, or push notifications.
 
- **Solution**: Use a background task queue like **Celery** with **Redis**, or FastAPI’s `BackgroundTasks`, to monitor and dispatch real-time alerts independently of user actions.
+ **Solution**: Use a background task queue like **Celery** with **Redis**, or FastAPI’s `BackgroundTasks`, to deliver actual alerts to users.
 
 ---
 
@@ -119,6 +122,18 @@ While this project is great for showcasing **FastAPI fundamentals**, testing, an
 
 ---
 
+## If I had more time, I would:
+
+- Integrate a real database (like PostgreSQL) for data persistence and better query support.
+
+- Implement email/SMS notifications using tools like Celery or external services (e.g., Twilio, SendGrid).
+
+- Add Docker support for containerization and portability.
+
+- Provide OpenAPI documentation using FastAPI's built-in support.
+  
+---
+
 
 ## Folder Structure
 
@@ -127,6 +142,7 @@ While this project is great for showcasing **FastAPI fundamentals**, testing, an
 ├── controllers/        # Route handlers
 ├── models/             # Pydantic schemas
 ├── services/           # Business logic
+├── tasks/              # Background worker (notification checker)
 ├── tests/              # Test cases
 ├── main.py             # FastAPI entry point
 ├── requirements.txt    # Dependencies
